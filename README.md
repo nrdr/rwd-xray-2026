@@ -1,5 +1,3 @@
-![Welcome to rwd-xray 2026!](https://cdn.discordapp.com/attachments/868284810794238043/1457491085336117453/image.png?ex=695c31d9&is=695ae059&hm=0e16550c8841ae178eae5dff963ededbb65eac4f30ce2ed160118ebc3cb04e23&)
-
 ### Usage:
 
 EPS tool:
