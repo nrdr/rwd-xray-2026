@@ -37,6 +37,7 @@ In your openpilot fork, update the steering tuning in `interface.py` (opendbc_re
 
 General guidance:
 - Update `TorqueBP` `TorqueV` using the spreadsheet calculator (at the bottom) for your car if you used the standard non-linear tune.
+- If you did make a linear tune, set `TorqueBP` and `TorqueV` to `[0, 3840]` each.
 - Unless you have done further testing, it is best to copy those values directly into `interface.py` directly. Hex is accepted.
 
 #### Optional: add a low-pass filter to reduce “twitchy” steering
