@@ -1,4 +1,4 @@
-![Welcome to rwd-xray 2026!](https://chatgpt.com/backend-api/estuary/content?id=file_000000000410722fb92675f29d5bc044&ts=490989&p=fs&cid=1&sig=6aa0ff04b70e73078719d717dbd62ee49d34d9d655972e29c7d38e381a9c6808&v=0)
+![Welcome to rwd-xray 2026!](https://cdn.discordapp.com/attachments/868284810794238043/1457491085336117453/image.png?ex=695c31d9&is=695ae059&hm=0e16550c8841ae178eae5dff963ededbb65eac4f30ce2ed160118ebc3cb04e23&)
 
 ### Usage:
 
