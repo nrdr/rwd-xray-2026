@@ -863,7 +863,7 @@ def main():
                 'filter_table row 6',
                 'filter_table row 7',
                 ]
-        elif input_bin_hash == 'c1680b0bf9c115ac1fdfcb1e9f98a7c4': #clarity thanks to Aragon
+        elif input_bin_hash == 'c1680b0bf9c115ac1fdfcb1e9f98a7c4': #clarity thanks to wirelessnet2
             print('Detected bin: 39990-TRW-A020 Honda Clarity')
             supported_versions = ['39990-TRW-A010\x00\x00', '39990-TRW-A020\x00\x00', '39990-TRW,A020\x00\x00']
             security_key = ['\x01\x11\x01\x12\x11\x20', '\x01\x11\x01\x12\x11\x20', '\x01\x11\x01\x12\x11\x20']
