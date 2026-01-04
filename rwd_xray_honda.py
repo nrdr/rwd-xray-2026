@@ -160,42 +160,85 @@ def cmd_find_ops(args: argparse.Namespace) -> int:
     bin_data = Path(args.bin).read_bytes()
     _, keys, _, _, fw_enc, _ = parse_x5a(rwd)
 
-    # default operator alphabet: keep it small first, expand if needed
-    op_alphabet = list(args.op_alphabet)
-    # Avoid / and % unless explicitly included, because of divide-by-zero complexity.
-    # (If you really want them, include them in --op-alphabet.)
+    alphabet = list(args.op_alphabet)
     print(f"Keys from RWD header5: {keys.hex()}")
-    print(f"Searching ops from alphabet: {''.join(op_alphabet)}")
+    print(f"Searching ops from alphabet: {''.join(alphabet)}")
 
+    best = None  # (ratio, ops_s, key_perm, offset, matched, compared)
+
+    # Consider key order permutations (3! = 6)
     key_perms = list(itertools.permutations(keys, 3))
-    op_triples = list(itertools.permutations(op_alphabet, 3))
+    # Consider ordered triples (allow repeats) to avoid missing cases
+    op_triples = list(itertools.product(alphabet, repeat=3))
 
-    matches = []
     for kp in key_perms:
         kbytes = bytes(kp)
+
+        # avoid div/mod by zero keys unless user insists on / or %
+        if any(op in "/%" and b == 0 for op, b in zip("///", kbytes)):
+            pass
+
         for ops in op_triples:
-            ops_s = ''.join(ops)
+            ops_s = "".join(ops)
+
+            # If user included / or %, skip any op that would divide/mod by zero key
+            if any(op in "/%" and kb == 0 for op, kb in zip(ops_s, kbytes)):
+                continue
+
             try:
                 decoder = build_decoder(kbytes, ops_s)
             except Exception:
                 continue
-            dec = decrypt_bytes(fw_enc, decoder)
-            if _maybe_match_bin(dec, bin_data):
-                matches.append((kbytes.hex(), ops_s))
-                print(f"✅ match: keys={kbytes.hex()} ops={ops_s}")
 
-    if not matches:
-        print("No exact match found.")
-        print("Try expanding --op-alphabet (e.g. '+-^&|*') or confirm your BIN is the raw decrypted payload.")
-        return 2
+            dec = decrypt_bytes(fw_enc, decoder) ## Note to ChatGPT: Not "decode?"
 
-    # if multiple matches, that's interesting; print them all
-    if len(matches) > 1:
-        print("Multiple matches found (unexpected, but not impossible):")
-        for khex, ops_s in matches:
-            print(f"  keys={khex} ops={ops_s}")
+            # Exact match (BIN is raw decrypted payload)
+            if dec == bin_data:
+                print(f"Exact match found! ops={ops_s} key_order={kp}")
+                return 0
 
-    return 0
+            if not args.allow_partial:
+                continue
+
+            # Partial mode: locate dec payload inside a container BIN
+            anchor_len = max(8, int(args.anchor_len))
+            sample_len = max(256, int(args.sample_len))
+            anchor = dec[:anchor_len]
+
+            start = 0
+            hits = 0
+            while True:
+                off = bin_data.find(anchor, start)
+                if off == -1:
+                    break
+                hits += 1
+                if hits > args.max_hits:
+                    break
+
+                cmp_len = min(sample_len, len(dec), len(bin_data) - off)
+                if cmp_len <= 0:
+                    break
+
+                matched = sum(1 for i in range(cmp_len) if dec[i] == bin_data[off + i])
+                ratio = matched / cmp_len
+
+                if best is None or ratio > best[0]:
+                    best = (ratio, ops_s, kp, off, matched, cmp_len)
+
+                start = off + 1
+
+    if args.allow_partial and best is not None:
+        ratio, ops_s, kp, off, matched, cmp_len = best
+        print("Best partial candidate:")
+        print(f"  ops={ops_s} key_order={kp} bin_offset=0x{off:X}")
+        print(f"  match={matched}/{cmp_len} ({ratio*100:.2f}%)")
+        print("If this percentage is high (say >95%), your BIN likely includes a container/header and")
+        print("the decrypted firmware payload starts at that offset.")
+        return 1
+
+    print("No exact match found.")
+    print("If your BIN is not a raw decrypted payload, rerun with --allow-partial to search for a payload slice.")
+    return 2
 
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -211,6 +254,14 @@ def main() -> int:
     ap_find.add_argument("--rwd", required=True)
     ap_find.add_argument("--bin", required=True)
     ap_find.add_argument("--op-alphabet", default="+-^&|*", help="Ops to consider (default: '+-^&|*')")
+    ap_find.add_argument("--allow-partial", action="store_true",
+                         help="If exact match fails, search for decrypted payload inside a container BIN")
+    ap_find.add_argument("--anchor-len", type=int, default=64,
+                         help="Anchor length used for locating payload inside BIN (default: 64)")
+    ap_find.add_argument("--sample-len", type=int, default=4096,
+                         help="Bytes to score per candidate when allow-partial is enabled (default: 4096)")
+    ap_find.add_argument("--max-hits", type=int, default=8,
+                         help="Max anchor occurrences to evaluate per candidate (default: 8)")
     ap_find.set_defaults(func=cmd_find_ops)
 
     args = ap.parse_args()
