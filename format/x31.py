@@ -1,8 +1,8 @@
 from binascii import a2b_hex
 
-from base import Base
-from header import Header
-from header_value import HeaderValue
+from .base import Base
+from .header import Header
+from .header_value import HeaderValue
 
 class x31(Base):
     def __init__(self, data):
